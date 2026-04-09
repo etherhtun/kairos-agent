@@ -44,7 +44,7 @@ exe = EXE(
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=True,
-    target_arch='universal',  # Build universal binary (Intel + Apple Silicon)
+    target_arch=None,  # Native arch per runner (arm64 on macos-latest, x86_64 on macos-13)
     codesign_identity=None,
     entitlements_file=None,
 )
