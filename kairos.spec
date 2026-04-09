@@ -21,6 +21,7 @@ a = Analysis(
         'tigeropen.trade.trade_client',
         'pandas',
         'dotenv',
+        'certifi',
     ],
     hookspath=[],
     hooksconfig={},

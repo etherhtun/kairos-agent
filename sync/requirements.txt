@@ -1,3 +1,4 @@
 tigeropen
 pandas
 python-dotenv
+certifi
