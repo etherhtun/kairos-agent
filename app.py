@@ -12,6 +12,18 @@ import datetime
 import threading
 import subprocess
 import sys
+import os
+
+# ── SSL fix — set before any network library is imported ─────────────────────
+try:
+    import certifi
+    _ca = certifi.where()
+    os.environ['SSL_CERT_FILE']      = _ca
+    os.environ['REQUESTS_CA_BUNDLE'] = _ca
+except ImportError:
+    pass
+# ─────────────────────────────────────────────────────────────────────────────
+
 import rumps
 
 from jobs.upload_sync import run_sync, last_data_age_hours, LOG_FILE

@@ -15,6 +15,17 @@ import sys
 import urllib.request
 import urllib.error
 
+# ── SSL fix — must happen before ANY network import ───────────────────────────
+# PyInstaller bundles don't have macOS system CA certs. Point to certifi bundle.
+try:
+    import certifi
+    _ca = certifi.where()
+    os.environ['SSL_CERT_FILE']      = _ca
+    os.environ['REQUESTS_CA_BUNDLE'] = _ca
+except ImportError:
+    pass
+# ─────────────────────────────────────────────────────────────────────────────
+
 from jobs import creds
 
 AGENT_DIR  = pathlib.Path.home() / '.kairos-agent'
@@ -32,7 +43,7 @@ def _bundled_sync_dir() -> pathlib.Path:
     return pathlib.Path(__file__).resolve().parent.parent / 'sync'
 
 
-BUNDLE_VERSION = '1.5'  # bump this when sync code changes
+BUNDLE_VERSION = '1.6'  # bump this when sync code changes
 
 def ensure_agent_dir():
     """Copy bundled sync code to ~/.kairos-agent/sync/, updating if stale."""
