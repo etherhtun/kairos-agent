@@ -14,23 +14,28 @@ permissions:
   contents: write
 
 jobs:
-  # ── macOS Apple Silicon (arm64) ────────────────────────────────────────────
-  build-mac-arm:
+  # ── macOS universal2 (Apple Silicon + Intel) ───────────────────────────────
+  build-mac:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+      - name: Install universal2 Python
+        run: |
+          # Download official universal2 Python installer (runs on both Intel and Apple Silicon)
+          curl -fsSL -o /tmp/python-installer.pkg \
+            "https://www.python.org/ftp/python/3.11.9/python-3.11.9-macos11.pkg"
+          sudo installer -pkg /tmp/python-installer.pkg -target /
+          # Use the universal2 python3.11
+          echo "/Library/Frameworks/Python.framework/Versions/3.11/bin" >> $GITHUB_PATH
 
       - name: Install dependencies
         run: |
-          pip install pyinstaller rumps pillow
-          pip install -r sync/requirements.txt
+          python3.11 -m pip install pyinstaller rumps pillow
+          python3.11 -m pip install -r sync/requirements.txt
 
-      - name: Build .app
-        run: python -m PyInstaller kairos.spec --noconfirm
+      - name: Build universal2 .app
+        run: python3.11 -m PyInstaller kairos.spec --noconfirm
 
       - name: Create DMG
         run: |
@@ -39,48 +44,13 @@ jobs:
             -volname "Kairos Agent" \
             -srcfolder dist/Kairos.app \
             -ov -format UDZO \
-            "dist/Kairos-${VERSION}-mac-arm64.dmg"
+            "dist/Kairos-${VERSION}-mac.dmg"
 
       - name: Upload DMG to release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name || inputs.version }}
-          files: dist/Kairos-*-mac-arm64.dmg
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # ── macOS Intel (x86_64) ───────────────────────────────────────────────────
-  build-mac-intel:
-    runs-on: macos-13-large
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          pip install pyinstaller rumps pillow
-          pip install -r sync/requirements.txt
-
-      - name: Build .app
-        run: python -m PyInstaller kairos.spec --noconfirm
-
-      - name: Create DMG
-        run: |
-          VERSION="${{ github.ref_name || inputs.version }}"
-          hdiutil create \
-            -volname "Kairos Agent" \
-            -srcfolder dist/Kairos.app \
-            -ov -format UDZO \
-            "dist/Kairos-${VERSION}-mac-intel.dmg"
-
-      - name: Upload DMG to release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name || inputs.version }}
-          files: dist/Kairos-*-mac-intel.dmg
+          files: dist/Kairos-*-mac.dmg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
