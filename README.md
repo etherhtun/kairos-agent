@@ -1,16 +1,55 @@
 # Kairos Agent
 
-Kairos Agent is a menubar app for macOS and Windows that syncs your Tiger Brokers trades to the [Kairos portal](https://kairos-f3w.pages.dev) automatically. Once configured, it runs silently in the background and keeps your trading journal up to date.
+Kairos Agent is a macOS menubar / Windows tray app that collects your trade data from Tiger Brokers and uploads it to Cloudflare. The [Kairos portal](https://kairos-f3w.pages.dev) then reads that data from Cloudflare and displays your trading journal.
 
 ---
 
-## What It Does
+## How It Works
 
-- Connects to Tiger Brokers using your local API credentials
-- Fetches trade history and classifies option strategies (Iron Condor, Bull Put Spread, etc.)
-- Uploads analytics to your private Kairos portal profile
+```
+Tiger Brokers API
+      │
+      │  (your credentials stay on your machine)
+      ▼
+Kairos Agent  ──────────────────────────────────────────────────┐
+  1. Fetches trade history from Tiger                           │
+  2. Classifies option strategies (IC, BPS, BCS, etc.)         │
+  3. Builds analytics → ~/.kairos-agent/data.json              │
+  4. Uploads data.json to Cloudflare R2                         │
+                                                    POST /api/upload
+                                                               │
+                                                               ▼
+                                                  Cloudflare R2
+                                                  profiles/{you}/data.json
+                                                               │
+                                                  GET /api/trades
+                                                               │
+                                                               ▼
+                                                  Kairos Portal
+                                                  kairos-f3w.pages.dev
+                                                  (reads from Cloudflare,
+                                                   displays your journal)
+```
+
+**Your broker credentials never leave your machine.** Only the processed trade analytics JSON is uploaded to Cloudflare.
+
+---
+
+## What the Agent Does
+
+- Connects to Tiger Brokers using your local `tiger_openapi_config.properties`
+- Fetches trade history (first run: full history; subsequent runs: last 30 days)
+- Classifies option strategies (Iron Condor, Bull Put Spread, Bear Call Spread, etc.)
+- Builds a `data.json` analytics file locally at `~/.kairos-agent/data.json`
+- Uploads `data.json` to your private Cloudflare R2 profile slot using your upload token
 - Auto-syncs once daily at 4:30 PM on weekdays
-- Lives in the menubar (macOS) or system tray (Windows) — no Dock icon, no windows
+- Lives in the menubar (macOS) or system tray (Windows) — no Dock icon, no extra windows
+
+## What the Portal Does
+
+- Reads `data.json` from your Cloudflare R2 profile slot (via `GET /api/trades`)
+- Displays your trade journal, P&L charts, strategy breakdown, open positions
+- Requires login (Google) — each user only sees their own data
 
 ---
 
@@ -18,107 +57,107 @@ Kairos Agent is a menubar app for macOS and Windows that syncs your Tiger Broker
 
 | Platform | Requirement |
 |----------|-------------|
-| macOS    | macOS 12 (Monterey) or later, Apple Silicon or Intel |
-| Windows  | Windows 10 or Windows 11 (64-bit) |
+| macOS    | macOS 12 (Monterey) or later · Apple Silicon or Intel |
+| Windows  | Windows 10 or 11 (64-bit) |
 | Both     | Tiger Brokers account with API access enabled |
-| Both     | Kairos portal account (`kairos-f3w.pages.dev`) |
+| Both     | Kairos portal account at `kairos-f3w.pages.dev` |
 
 ---
 
 ## Installation
 
-### Step 1 — Download
+### Step 1 — Get your upload token
 
-Go to the [Connect page](https://kairos-f3w.pages.dev/connect-tiger) and download the app for your platform:
+1. Log in to [kairos-f3w.pages.dev](https://kairos-f3w.pages.dev)
+2. Click **Connect Broker** → **Tiger Brokers** → **Go to Connect page**
+3. Copy your upload token — this links the agent to your portal account
 
-| Platform | File |
-|----------|------|
-| macOS    | `Kairos-v1.1.1-mac.dmg` |
-| Windows  | `Kairos-v1.1.1-windows.zip` |
+### Step 2 — Download the app
 
-Or download directly from [GitHub Releases](https://github.com/etherhtun/kairos-agent/releases/latest).
+| Platform | Download |
+|----------|----------|
+| macOS    | [Kairos-v1.1.1-mac.dmg](https://github.com/etherhtun/kairos-agent/releases/download/v1.1.1/Kairos-v1.1.1-mac.dmg) |
+| Windows  | [Kairos-v1.1.1-windows.zip](https://github.com/etherhtun/kairos-agent/releases/download/v1.1.1/Kairos-v1.1.1-windows.zip) |
 
----
-
-### macOS Setup
-
-1. Open the `.dmg` file
-2. Drag **Kairos** into your **Applications** folder
-3. Eject the disk image
-
-**First launch — Gatekeeper bypass:**
-
-Because Kairos is not yet signed with an Apple Developer certificate, macOS will block it on first open.
-
-**Option A:**
-1. Open **System Settings** → **Privacy & Security**
-2. Scroll to Security section → click **Open Anyway**
-
-**Option B:**
-1. Right-click **Kairos** in Finder → **Open** → **Open**
+Latest release: [github.com/etherhtun/kairos-agent/releases/latest](https://github.com/etherhtun/kairos-agent/releases/latest)
 
 ---
 
-### Windows Setup
+### macOS Install
+
+1. Open the `.dmg` → drag **Kairos** to **Applications**
+2. Eject the disk image
+3. Open Kairos from Applications or Launchpad
+
+**macOS Gatekeeper (unsigned app warning):**
+> "Kairos" Not Opened — Apple could not verify...
+
+Fix: **System Settings → Privacy & Security → Open Anyway**
+Or: Right-click Kairos in Finder → **Open** → **Open**
+
+---
+
+### Windows Install
 
 1. Extract `Kairos-v1.1.1-windows.zip`
-2. Move the `Kairos` folder to `C:\Program Files\Kairos` (or anywhere you prefer)
-3. Run `Kairos.exe` inside the folder
-4. **Windows Defender SmartScreen** may show a warning — click **More info → Run anyway**
+2. Move the `Kairos` folder anywhere (e.g. `C:\Program Files\Kairos`)
+3. Run `Kairos.exe`
 
-To start Kairos automatically on login: right-click `Kairos.exe` → **Create shortcut** → move shortcut to:
+**Windows Defender SmartScreen warning:** Click **More info → Run anyway**
+
+To auto-start on login: right-click `Kairos.exe` → Create shortcut → paste shortcut into:
 ```
 C:\Users\<you>\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup
 ```
 
 ---
 
-### Step 2 — Setup Wizard
+### Step 3 — Setup Wizard
 
-On first launch, the setup wizard appears automatically:
+On first launch the setup wizard appears automatically:
 
-**Step 1 — Upload token**
-Get your token from [kairos-f3w.pages.dev/connect-tiger](https://kairos-f3w.pages.dev/connect-tiger) after logging in. Paste it into the wizard.
+1. **Upload token** — paste the token you copied from the portal `/connect-tiger` page
+2. **Tiger config file** — select `tiger_openapi_config.properties` downloaded from Tiger app → **API Management → Download Config**
 
-**Step 2 — Tiger config file**
-Download `tiger_openapi_config.properties` from Tiger app → **API Management → Download Config**. Select the file when prompted.
-
-Kairos stores both credentials locally only. Nothing is uploaded except your anonymised trade analytics.
+Once complete, the agent runs a full sync immediately and uploads your data to Cloudflare. Open the portal to see your trades.
 
 ---
 
-## Usage
+## Menubar / Tray Menu
 
-| Menu Item | Description |
-|-----------|-------------|
-| Last sync | Shows time of last successful sync |
-| Sync now | Manually trigger a sync |
-| Auto-sync at 4:30 PM | Toggle daily auto-sync on/off |
-| Open portal | Open Kairos dashboard in browser |
-| View logs | Open sync log file |
-| Setup / reconfigure | Re-run setup wizard |
-| Quit | Exit the app |
+| Item | Description |
+|------|-------------|
+| Last sync | Time of last successful sync |
+| Sync now | Manually trigger a sync immediately |
+| Auto-sync at 4:30 PM | Toggle daily weekday auto-sync |
+| Open portal | Open `kairos-f3w.pages.dev` in your browser |
+| View logs | Open `~/.kairos-agent/logs/sync.log` |
+| Setup / reconfigure | Re-run the setup wizard |
+| Quit | Exit the agent |
 
 ---
 
-## Privacy & Data
+## Local File Storage
 
-| Data | Where it lives |
-|------|---------------|
-| Tiger API credentials | Local only — `~/.kairos-agent/tiger_openapi_config.properties` |
-| Upload token | Local only — `~/.kairos-agent/credentials.json` |
-| Trade analytics | Uploaded to your private R2 profile slot — accessible only to you |
-| Sync logs | Local only — `~/.kairos-agent/logs/sync.log` |
+| File | Purpose |
+|------|---------|
+| `~/.kairos-agent/credentials.json` | Upload token (local only) |
+| `~/.kairos-agent/tiger_openapi_config.properties` | Tiger API credentials (local only, never uploaded) |
+| `~/.kairos-agent/data.json` | Latest trade analytics (uploaded to Cloudflare) |
+| `~/.kairos-agent/data.backup.json` | Backup of previous sync |
+| `~/.kairos-agent/logs/sync.log` | Sync run history |
+| `~/.kairos-agent/state.json` | App state (last sync date, preferences) |
+| `~/.kairos-agent/sync/` | Sync code extracted from app bundle |
 
-Credentials are stored with restricted permissions (`chmod 600`). No broker keys are ever transmitted to any server.
+Credentials files are stored with restricted permissions (`chmod 600`). Broker keys are never transmitted anywhere.
 
 ---
 
 ## Disclaimer
 
-> Kairos is a personal trading journal tool. It does not provide financial advice, investment recommendations, or trading signals. All data is for informational and record-keeping purposes only.
+> Kairos is a personal trading journal tool only. It does not provide financial advice, investment recommendations, or trading signals. All data displayed is for informational and record-keeping purposes only.
 >
-> You are solely responsible for your trading decisions. Past performance shown in the portal does not guarantee future results.
+> You are solely responsible for your trading decisions. Past performance does not guarantee future results.
 >
 > Kairos is not affiliated with Tiger Brokers, Webull, MooMoo, or any other brokerage.
 
@@ -126,26 +165,25 @@ Credentials are stored with restricted permissions (`chmod 600`). No broker keys
 
 ## Troubleshooting
 
-**Setup wizard does not appear on first launch**
-- Quit and reopen the app
-- Delete `~/.kairos-agent/state.json` and relaunch
+**Setup wizard doesn't appear on first launch**
+→ Delete `~/.kairos-agent/state.json` and relaunch the app
 
-**Tiger connection error / Tiger ID empty**
-- Re-run Setup and re-select your `tiger_openapi_config.properties` file
-- Ensure API access is enabled in Tiger app → API Management
+**Tiger ID empty / connection error**
+→ Re-run Setup and re-select your `tiger_openapi_config.properties`
+→ Check Tiger app → API Management that API access is enabled
 
 **Upload fails with 401 Unauthorized**
-- Your token may have changed — visit `/connect-tiger` on the portal and copy the current token, then re-run Setup
+→ Your token may have changed — go to portal `/connect-tiger`, copy the current token, re-run Setup
 
 **Portal shows "No data yet" after sync**
-- Check **View logs** for errors
-- Confirm the upload token in the wizard matches the one on the portal
+→ Open View logs and check for upload errors
+→ Confirm the token in the wizard matches the one shown on the portal
 
-**macOS: app blocked by Gatekeeper**
-- See [macOS Setup → First launch](#macos-setup) above
+**macOS: blocked by Gatekeeper**
+→ System Settings → Privacy & Security → Open Anyway
 
-**Windows: app blocked by Defender SmartScreen**
-- Click **More info → Run anyway**
+**Windows: blocked by SmartScreen**
+→ More info → Run anyway
 
 ---
 
@@ -159,17 +197,19 @@ cd kairos-agent
 pip install rumps pyinstaller
 pip install -r sync/requirements.txt
 python -m PyInstaller kairos.spec --noconfirm
+# Output: dist/Kairos.app
 
 # Windows
 pip install pystray pillow plyer pyinstaller
 pip install -r sync/requirements.txt
 python -m PyInstaller kairos_win.spec --noconfirm
+# Output: dist/Kairos/Kairos.exe
 ```
 
-Automated builds run via [GitHub Actions](.github/workflows/release.yml) on every version tag.
+Releases are built automatically via [GitHub Actions](.github/workflows/release.yml) when a version tag is pushed.
 
 ---
 
 ## License
 
-MIT — see [LICENSE](LICENSE)
+MIT
