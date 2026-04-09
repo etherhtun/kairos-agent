@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-# PyInstaller spec for Kairos Agent macOS app
+# PyInstaller spec for Kairos Agent macOS app (Universal Binary)
 
 import sys
 from pathlib import Path
@@ -44,7 +44,7 @@ exe = EXE(
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=True,
-    target_arch=None,
+    target_arch='universal',  # Build universal binary (Intel + Apple Silicon)
     codesign_identity=None,
     entitlements_file=None,
 )
