@@ -14,24 +14,14 @@ import subprocess
 import sys
 import os
 
-# ── SSL fix — must run before ANY network import (PyInstaller bundles lack CA certs) ──
-try:
-    import ssl, certifi
-    _ca = certifi.where()
-    os.environ['SSL_CERT_FILE']      = _ca
-    os.environ['REQUESTS_CA_BUNDLE'] = _ca
-    # Monkey-patch ssl.create_default_context so every HTTP library picks up certifi
-    _orig_ssl_ctx = ssl.create_default_context
-    def _ssl_ctx_patch(*args, **kwargs):
-        if not any(k in kwargs for k in ('cafile', 'cadata', 'capath')):
-            kwargs['cafile'] = _ca
-        return _orig_ssl_ctx(*args, **kwargs)
-    ssl.create_default_context = _ssl_ctx_patch
-except Exception:
-    pass
+# ── SSL fix — must run before ANY network import ──────────────────────────────
+# Adds kairos-agent/ to sys.path so jobs/ is importable, then applies the fix.
+# truststore → macOS Keychain (Intel + Apple Silicon, covers regional CAs)
+# certifi     → Mozilla CA bundle fallback
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from jobs import ssl_fix
+ssl_fix
 # ─────────────────────────────────────────────────────────────────────────────
-
-import rumps
 
 from jobs.upload_sync import run_sync, last_data_age_hours, LOG_FILE
 from jobs.setup import run_setup

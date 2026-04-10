@@ -16,20 +16,10 @@ import urllib.request
 import urllib.error
 
 # ── SSL fix — must happen before ANY network import ───────────────────────────
-# PyInstaller bundles don't have macOS system CA certs. Point to certifi bundle.
-try:
-    import ssl, certifi
-    _ca = certifi.where()
-    os.environ['SSL_CERT_FILE']      = _ca
-    os.environ['REQUESTS_CA_BUNDLE'] = _ca
-    _orig_ssl_ctx = ssl.create_default_context
-    def _ssl_ctx_patch(*args, **kwargs):
-        if not any(k in kwargs for k in ('cafile', 'cadata', 'capath')):
-            kwargs['cafile'] = _ca
-        return _orig_ssl_ctx(*args, **kwargs)
-    ssl.create_default_context = _ssl_ctx_patch
-except Exception:
-    pass
+# Patches ssl.create_default_context with either truststore (macOS Keychain)
+# or certifi's CA bundle. Only runs once; subsequent imports are no-ops.
+from jobs import ssl_fix
+ssl_fix
 # ─────────────────────────────────────────────────────────────────────────────
 
 from jobs import creds

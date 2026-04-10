@@ -13,6 +13,8 @@ a = Analysis(
     datas=[
         # Bundle the sync code so it can be copied to ~/.kairos-agent/sync/
         (str(ROOT / 'sync'), 'sync'),
+        # Bundle jobs/ so that app.py and upload_sync.py can import from it
+        (str(ROOT / 'jobs'),  'jobs'),
     ],
     hiddenimports=[
         'rumps',
@@ -22,6 +24,7 @@ a = Analysis(
         'pandas',
         'dotenv',
         'certifi',
+        'truststore',        # C extension — PyInstaller can't detect it statically
     ],
     hookspath=[],
     hooksconfig={},
@@ -68,6 +71,6 @@ app = BUNDLE(
     info_plist={
         'LSUIElement': True,           # Hide from Dock (menubar only)
         'NSHighResolutionCapable': True,
-        'CFBundleShortVersionString': '1.3.0',
+        'CFBundleShortVersionString': '1.3.1',
     },
 )
