@@ -14,6 +14,14 @@ import subprocess
 import sys
 import io
 
+# ── SSL fix — must run before ANY network import ──────────────────────────────
+# truststore → macOS Keychain / Windows cert store (Intel + Apple Silicon)
+# certifi     → Mozilla CA bundle fallback
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from jobs import ssl_fix
+ssl_fix
+# ─────────────────────────────────────────────────────────────────────────────
+
 from PIL import Image, ImageDraw
 import pystray
 

@@ -61,7 +61,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install pyinstaller pystray pillow plyer
+          pip install pyinstaller pystray pillow plyer truststore
           pip install -r sync/requirements.txt
 
       - name: Build .exe

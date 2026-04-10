@@ -12,6 +12,7 @@ a = Analysis(
     binaries=[],
     datas=[
         (str(ROOT / 'sync'), 'sync'),
+        (str(ROOT / 'jobs'),  'jobs'),
     ],
     hiddenimports=[
         'pystray',
@@ -30,6 +31,7 @@ a = Analysis(
         'tkinter.messagebox',
         'tkinter.simpledialog',
         'tkinter.filedialog',
+        'truststore',       # C extension — PyInstaller can't detect it statically
     ],
     hookspath=[],
     runtime_hooks=[],
