@@ -21,9 +21,17 @@ warnings.filterwarnings('ignore')
 # (bundled Python doesn't have access to macOS system certs)
 try:
     import certifi
-    os.environ.setdefault('SSL_CERT_FILE', certifi.where())
-    os.environ.setdefault('REQUESTS_CA_BUNDLE', certifi.where())
-except ImportError:
+    _ca = certifi.where()
+    os.environ.setdefault('SSL_CERT_FILE', _ca)
+    os.environ.setdefault('REQUESTS_CA_BUNDLE', _ca)
+    # Patch ssl.create_default_context in case env vars were set too late
+    _orig_ssl = ssl.create_default_context
+    def _ssl_patch(*args, **kwargs):
+        if not any(k in kwargs for k in ('cafile', 'cadata', 'capath')):
+            kwargs['cafile'] = _ca
+        return _orig_ssl(*args, **kwargs)
+    ssl.create_default_context = _ssl_patch
+except Exception:
     pass
 
 from .base import BrokerBase, Position, Trade, AccountSummary

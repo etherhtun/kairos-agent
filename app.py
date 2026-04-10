@@ -14,13 +14,20 @@ import subprocess
 import sys
 import os
 
-# ── SSL fix — set before any network library is imported ─────────────────────
+# ── SSL fix — must run before ANY network import (PyInstaller bundles lack CA certs) ──
 try:
-    import certifi
+    import ssl, certifi
     _ca = certifi.where()
     os.environ['SSL_CERT_FILE']      = _ca
     os.environ['REQUESTS_CA_BUNDLE'] = _ca
-except ImportError:
+    # Monkey-patch ssl.create_default_context so every HTTP library picks up certifi
+    _orig_ssl_ctx = ssl.create_default_context
+    def _ssl_ctx_patch(*args, **kwargs):
+        if not any(k in kwargs for k in ('cafile', 'cadata', 'capath')):
+            kwargs['cafile'] = _ca
+        return _orig_ssl_ctx(*args, **kwargs)
+    ssl.create_default_context = _ssl_ctx_patch
+except Exception:
     pass
 # ─────────────────────────────────────────────────────────────────────────────
 

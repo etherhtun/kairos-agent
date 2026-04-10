@@ -68,6 +68,6 @@ app = BUNDLE(
     info_plist={
         'LSUIElement': True,           # Hide from Dock (menubar only)
         'NSHighResolutionCapable': True,
-        'CFBundleShortVersionString': '1.0.0',
+        'CFBundleShortVersionString': '1.3.0',
     },
 )
